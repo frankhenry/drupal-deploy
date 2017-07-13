@@ -69,7 +69,7 @@ namespace :drupal do
   task :site_offline do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-        execute :drush, 'vset maintenance_mode 1 -y'
+        execute :drush, 'sset system.maintenance_mode 1 -y'
       end
     end
   end
@@ -78,7 +78,7 @@ namespace :drupal do
   task :site_online do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-        execute :drush, 'vset maintenance_mode 0 -y'
+        execute :drush, 'sset system.maintenance_mode 0 -y'
       end
     end
   end
