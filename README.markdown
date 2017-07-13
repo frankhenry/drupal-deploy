@@ -1,6 +1,6 @@
 # Capistrano::DrupalDeploy
 
-Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a pluging for capistrano that provide a number of tasks specific to Drupal. For the moment support only Drupal 7.
+Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a pluging for capistrano that provide a number of tasks specific to Drupal.
 
 If you are new to capistrano check the [Capistrano 3 documentation](http://capistranorb.com/).
 
@@ -32,8 +32,6 @@ Require the module in your `Capfile`:
 
 ```ruby
 require 'capistrano/drupal-deploy'
-# Composer is needed to install drush on the server
-require 'capistrano/composer'
 ```
 
 ### Configuration
@@ -62,19 +60,11 @@ set :linked_files, fetch(:linked_files, []).push('app/sites/default/settings.php
 set :linked_dirs, fetch(:linked_dirs, []).push('app/sites/default/files', 'private-files')
 ```
 
-
-Composer and drush need to be mapped
+Drush need to be mapped
 
 ```ruby
-# Remove default composer install task on deploy:updated
-Rake::Task['deploy:updated'].prerequisites.delete('composer:install')
-
-# Map composer and drush commands
-# NOTE: If stage have different deploy_to
-# you have to copy those line for each <stage_name>.rb
-# See https://github.com/capistrano/composer/issues/22
-SSHKit.config.command_map[:composer] = "#{shared_path.join("composer.phar")}"
-SSHKit.config.command_map[:drush] = "#{shared_path.join("vendor/bin/drush")}"
+# NOTE: If stage have different deploy_to you have to copy this line for each <stage_name>.rb
+SSHKit.config.command_map[:drush] = "#{shared_path.join("drush/contrib/drush/drush")}"
 ```
 	
 Configure each stage in config/deploy/<stage_name>.rb. Overwrite global settings if needed.
@@ -123,13 +113,7 @@ Now, every time you want to deploy your app
 
 	$ cap deploy
 
-Some command use drush. To install drush on your server
-
-	$ cap composer:install_executable
-	$ cap drush:install
-
-
-If you want to deploy your app and also revert features, clear cache
+If you want to deploy your app and also import the configuration, clear cache
 
 	$ cap deploy:full
 	
@@ -146,8 +130,6 @@ This show a list of all avaible commands:
 
     
 	cap composer:install               # Install the project dependencies via Composer
-	cap composer:install_executable    # Installs composer.phar to the shared directory
-	cap composer:self_update           # Run the self-update command for composer.phar
 	cap deploy                         # Deploy a new release
 	cap deploy:check                   # Check required files and directories exist
 	cap deploy:check:directories       # Check shared and release directories exist
@@ -159,7 +141,7 @@ This show a list of all avaible commands:
 	cap deploy:finished                # Finished
 	cap deploy:finishing               # Finish the deployment, clean up server(s)
 	cap deploy:finishing_rollback      # Finish the rollback, clean up server(s)
-	cap deploy:full                    # Deploy your project and do an updatedb, feature revert, cache clear..
+	cap deploy:full                    # Deploy your project and do an updatedb, configuration import, cache clear..
 	cap deploy:log_revision            # Log details of the deploy
 	cap deploy:published               # Published
 	cap deploy:publishing              # Publish the release
@@ -181,7 +163,7 @@ This show a list of all avaible commands:
 	cap drupal:cache:clear             # Clear all caches
 	cap drupal:cli                     # Open an interactive shell on a Drupal site
 	cap drupal:drush                   # Run any drush command
-	cap drupal:feature_revert          # Revert feature
+	cap drupal:configuration_import	   # Configuration import
 	cap drupal:logs                    # Show logs
 	cap drupal:requirements            # Provides information about things that may be wrong in your Drupal installation, if any
 	cap drupal:site_offline            # Set the site offline
@@ -189,7 +171,6 @@ This show a list of all avaible commands:
 	cap drupal:update:pm_updatestatus  # Show a report of available minor updates to Drupal core and contrib projects
 	cap drupal:update:updatedb         # Apply any database updates required (as with running update.php)
 	cap drupal:update:updatedb_status  # List any pending database updates
-	cap drush:install                  # Install Drush
 	cap files:download                 # Download drupal sites files (from remote to local)
 	cap files:upload                   # Upload drupal sites files (from local to remote)
 	cap install                        # Install Capistrano, cap install STAGES=staging,production

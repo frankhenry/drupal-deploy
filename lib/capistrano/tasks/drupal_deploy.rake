@@ -2,38 +2,25 @@
 # See https://github.com/capistrano/capistrano/pull/605
 namespace :load do
   task :defaults do
-    set :composer_download_url, "https://getcomposer.org/installer"
-    set :install_composer, true
-    set :install_drush, true
     set :app_path, 'app'
-    if fetch(:install_drush)
-      set :drush,  "#{fetch(:shared_path)}/drush/drush"
-      set :drush_version, "~6.0.0"
-    end
   end
 end
 
 
 namespace :deploy do
 
-  desc 'Deploy your project and do an updatedb, feature revert, cache clear...'
+  desc 'Deploy your project and do an updatedb, configuration import, cache clear...'
   task :full do
     :deploy
 
-    if fetch(:install_composer)
-      invoke "composer:install_executable"
-    end
-
-    if fetch(:install_drush)
-      invoke "drush:install"
-    end
-
     invoke "drupal:site_offline"
     invoke "drupal:update:updatedb"
-    invoke "drupal:feature_revert"
+    invoke "drupal:configuration_import"
     invoke "drupal:site_online"
     invoke "drupal:cache:clear"
   end
+
+  after :finishing, "build:theme"
 end
 
 # Specific Drupal tasks
@@ -95,11 +82,11 @@ namespace :drupal do
     end
   end
 
-  desc 'Revert feature'
-  task :feature_revert do
+  desc 'Import configuration'
+  task :configuration_import do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-        execute :drush, 'features-revert-all -y'
+        execute :drush, 'config-import -y'
       end
     end
   end
@@ -147,7 +134,7 @@ namespace :drupal do
     task :clear do
       on roles(:app) do
         within release_path.join(fetch(:app_path)) do
-          execute :drush, 'cache-clear all'
+          execute :drush, 'cache-rebuild'
         end
       end
     end
@@ -194,15 +181,13 @@ namespace :files do
 
 end
 
+namespace :theme do
 
-# Install drush
-namespace :drush do
-  desc "Install Drush"
-  task :install do
-    on roles(:app) do
-      within shared_path do
-        execute :composer, "require drush/drush:#{fetch(:drush_version)}"
-      end
+  desc "Install dependencies and build theme"
+  task :build do
+    on roles(:app) do |server|
+      system("sh ./scripts/deploy/build-theme.sh")
     end
   end
+
 end
