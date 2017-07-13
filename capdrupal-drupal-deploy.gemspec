@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.require_path = 'lib'
 
   spec.add_dependency 'capistrano', '~> 3.2', '>= 3.2.0'
-
+  spec.add_dependency 'capistrano-composer', '~> 0.0.6'
 
   spec.add_development_dependency 'bundler', '~> 1.9'
   spec.add_development_dependency 'rake', '~> 10.4'
