@@ -18,9 +18,10 @@ namespace :deploy do
     invoke "drupal:configuration_import"
     invoke "drupal:site_online"
     invoke "drupal:cache:clear"
+
+    invoke "theme:build"
   end
 
-  after :finishing, "build:theme"
 end
 
 # Specific Drupal tasks
