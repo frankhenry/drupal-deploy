@@ -19,7 +19,7 @@ namespace :deploy do
     invoke "drupal:site_online"
     invoke "drupal:cache:clear"
 
-    invoke "theme:build"
+    # invoke "theme:build"
   end
 
 end
@@ -182,13 +182,13 @@ namespace :files do
 
 end
 
-namespace :theme do
+# namespace :theme do
 
-  desc "Install dependencies and build theme"
-  task :build do
-    on roles(:app) do |server|
-      system("sh ./scripts/deploy/build-theme.sh")
-    end
-  end
+#   desc "Install dependencies and build theme"
+#   task :build do
+#     on roles(:app) do |server|
+#       system("sh ./scripts/deploy/build-theme.sh")
+#     end
+#   end
 
-end
+# end
