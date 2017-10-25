@@ -1,12 +1,5 @@
 # Load default values the capistrano 3.x way.
 # See https://github.com/capistrano/capistrano/pull/605
-Rake::Task["deploy:check:directories"].clear
-Rake::Task["deploy:check:linked_dirs"].clear
-Rake::Task["deploy:check:make_linked_dirs"].clear
-Rake::Task["deploy:check:linked_files"].clear
-
-Rake::Task["deploy:symlink:linked_dirs"].clear
-Rake::Task["deploy:symlink:linked_files"].clear
 
 def shared_path
   Pathname.new(fetch(:shared_path))
