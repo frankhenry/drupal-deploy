@@ -1,5 +1,17 @@
 # Load default values the capistrano 3.x way.
 # See https://github.com/capistrano/capistrano/pull/605
+Rake::Task["deploy:check:directories"].clear
+Rake::Task["deploy:check:linked_dirs"].clear
+Rake::Task["deploy:check:make_linked_dirs"].clear
+Rake::Task["deploy:check:linked_files"].clear
+
+Rake::Task["deploy:symlink:linked_dirs"].clear
+Rake::Task["deploy:symlink:linked_files"].clear
+
+def shared_path
+  Pathname.new(fetch(:shared_path))
+end
+
 namespace :load do
   task :defaults do
     set :app_path, 'app'
@@ -26,7 +38,7 @@ namespace :deploy do
     desc "Check shared and release directories exist"
     task :directories do
       on release_roles :all do
-        execute :mkdir, "-p", fetch(:shared_path), releases_path
+        execute :mkdir, "-p", shared_path, releases_path
       end
     end
 
@@ -34,7 +46,7 @@ namespace :deploy do
     task :linked_dirs do
       next unless any? :linked_dirs
       on release_roles :all do
-        execute :mkdir, "-p", linked_dirs(fetch(:shared_path))
+        execute :mkdir, "-p", linked_dirs(shared_path)
       end
     end
 
@@ -42,7 +54,7 @@ namespace :deploy do
     task :make_linked_dirs do
       next unless any? :linked_files
       on release_roles :all do |_host|
-        execute :mkdir, "-p", linked_file_dirs(fetch(:shared_path))
+        execute :mkdir, "-p", linked_file_dirs(shared_path)
       end
     end
 
@@ -50,7 +62,7 @@ namespace :deploy do
     task :linked_files do
       next unless any? :linked_files
       on release_roles :all do |host|
-        linked_files(fetch(:shared_path)).each do |file|
+        linked_files(shared_path).each do |file|
           unless test "[ -f #{file} ]"
             error t(:linked_file_does_not_exist, file: file, host: host)
             exit 1
@@ -69,7 +81,7 @@ namespace :deploy do
 
         fetch(:linked_dirs).each do |dir|
           target = release_path.join(dir)
-          source = fetch(:shared_path).join(dir)
+          source = shared_path.join(dir)
           next if test "[ -L #{target} ]"
           execute :rm, "-rf", target if test "[ -d #{target} ]"
           execute :ln, "-s", source, target
@@ -85,7 +97,7 @@ namespace :deploy do
 
         fetch(:linked_files).each do |file|
           target = release_path.join(file)
-          source = fetch(:shared_path).join(file)
+          source = shared_path.join(file)
           next if test "[ -L #{target} ]"
           execute :rm, target if test "[ -f #{target} ]"
           execute :ln, "-s", source, target
