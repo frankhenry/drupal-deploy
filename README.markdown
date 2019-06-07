@@ -39,7 +39,7 @@ require 'capistrano/drupal-deploy'
 Edit `config/deploy.rb` to set the global parameters. You should at least edit your app_name and your repo_url.
 
 ```ruby
- set :application, 'my app name'
+ set :application, 'my_app_name'
  set :repo_url, 'git@example.com:me/my_repo.git'
 ```
 
@@ -47,7 +47,7 @@ Edit `config/deploy.rb` to set the global parameters. You should at least edit y
 
 ```ruby
 # Path to the drupal directory, default to app.
-set :app_path,        "app"
+set :app_path,        "web"
 ```
 
 Drupal need settings.php and, files and private-files shared accross deploy
