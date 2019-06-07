@@ -7,14 +7,14 @@ Gem::Specification.new do |spec|
   spec.name         = 'capistrano-drupal-deploy'
   spec.version      = '0.0.2'
   spec.license      = 'MIT'
-  spec.authors  = [ "Emmanuel Veyrat", "Simon Perdrisat", "Gilles Doge" ]
-  spec.email    = 'emmanuel@unitedworldwrestling.org'
-  spec.homepage = %q{https://github.com/capistrano/drupal-deploy}
+  spec.authors  = [ "Frank Henry" ]
+  spec.email    = 'frank.henry@frankcommunication.ie'
+  spec.homepage = %q{https://github.com/frankhenry/drupal-deploy}
   spec.platform     = Gem::Platform::RUBY
   spec.description  = <<-DESC
-    A set of tasks for deploying Drupal 8 projects with Capistrano 3 and the help of Drush.
+    A set of tasks for deploying Drupal 7 and 8 projects with Capistrano 3 and the help of Drush.
   DESC
-  spec.summary      = 'A set of tasks for deploying Drupal projects with Capistrano'
+  spec.summary      = 'A set of tasks for deploying Drupal 7 and 8 projects with Capistrano'
 
   spec.extra_rdoc_files = [
     "README.markdown"
