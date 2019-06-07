@@ -72,8 +72,13 @@ namespace :drupal do
   desc 'Set the site offline'
   task :site_offline do
     on roles(:app) do
+      if fetch(:drupal_version) == '8' then
+        command = 'state-set system.maintenance_mode 1 -y'
+      else
+        command = 'vset maintenance_mode 1'
+      end
       within release_path.join(fetch(:app_path)) do
-        execute :drush, 'state-set system.maintenance_mode 1 -y'
+        execute :drush, "#{command}"
       end
     end
   end
@@ -81,8 +86,13 @@ namespace :drupal do
   desc 'Set the site online'
   task :site_online do
     on roles(:app) do
+      if fetch(:drupal_version) == '8' then
+        command = 'state-set system.maintenance_mode 0 -y'
+      else
+        command = 'vset maintenance_mode 0'
+      end
       within release_path.join(fetch(:app_path)) do
-        execute :drush, 'state-set system.maintenance_mode 0 -y'
+        execute :drush, "#{command}"
       end
     end
   end
@@ -128,7 +138,11 @@ namespace :drupal do
     task :pm_updatestatus do
       on roles(:app) do
         within release_path.join(fetch(:app_path)) do
-          execute :drush, 'pm-updatestatus'
+          if fetch(:drupal_version) == '7' then
+            execute :drush, 'pm-updatestatus'
+          else
+            puts "This command only works on Drupal 7"
+          end
         end
       end
     end
@@ -139,7 +153,14 @@ namespace :drupal do
     task :clear do
       on roles(:app) do
         within release_path.join(fetch(:app_path)) do
-          execute :drush, 'cache-rebuild'
+          if fetch(:drupal_version) == '8' then
+            command = 'cache-rebuild'
+          else
+            command = 'cache-clear all'
+          end
+          within release_path.join(fetch(:app_path)) do
+            execute :drush, "#{command}"
+          end
         end
       end
     end
