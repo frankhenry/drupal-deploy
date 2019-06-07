@@ -18,6 +18,7 @@ namespace :deploy do
   task :full do
     :deploy
 
+    invoke "drupal:sync_settings"
     invoke "drupal:site_offline"
     invoke "drupal:update:updatedb"
     invoke "drupal:configuration_import"
@@ -114,6 +115,19 @@ namespace :drupal do
       end
     end
   end
+
+  desc 'Copy the environment-specific settings file'
+  task :sync_settings do
+    on roles(:app) do
+      within release_path.join(fetch(:app_path)) do
+          settings_src = "#{shared_path}/settings/#{(fetch(:settings_file))}"
+          settings_dest = "#{shared_path}/#{(fetch(:app_path))}/sites/default/settings.php"
+          settings_shared_src = "#{shared_path}/settings/shared.settings.php}"
+          settings_shared_dest = "#{shared_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
+          execute :cp, "#{settings_src} #{settings_dest}"
+      end
+    end
+  end      
 
   namespace :update do
     desc 'List any pending database updates.'
