@@ -27,6 +27,14 @@ namespace :deploy do
 
     # invoke "theme:build"
   end
+
+  desc "On first deployment, ensure required linked directories and files exist"
+  task :first do
+    :make_linked_dirs
+    invoke "linked_files:touch"
+    :deploy
+    invoke "drupal:sync_settings"
+  end 
 end
 
 # Specific Drupal tasks
