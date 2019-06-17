@@ -22,7 +22,6 @@ namespace :drupal do
       desc "Deploy your project and do an updatedb, configuration import, cache clear..."
       task :full do
         invoke "drupal:deploy"
-        invoke "drupal:sync_settings"
         invoke "drupal:site_offline"
         invoke "drupal:update:updatedb"
         invoke "drupal:configuration_import"
