@@ -1,44 +1,50 @@
 # Load default values the capistrano 3.x way.
 # See https://github.com/capistrano/capistrano/pull/605
 
-def shared_path
-  Pathname.new(fetch(:shared_path))
-end
-
 namespace :load do
   task :defaults do
     set :app_path, 'app'
   end
 end
 
-
-namespace :deploy do
-
-  desc 'Deploy your project and do an updatedb, configuration import, cache clear...'
-  task :full do
-    :deploy
-
-    invoke "drupal:sync_settings"
-    invoke "drupal:site_offline"
-    invoke "drupal:update:updatedb"
-    invoke "drupal:configuration_import"
-    invoke "drupal:site_online"
-    invoke "drupal:cache:clear"
-
-    # invoke "theme:build"
-  end
-
-  desc "On first deployment, ensure required linked directories and files exist"
-  task :first do
-    :make_linked_dirs
-    invoke "linked_files:touch"
-    :deploy
-    invoke "drupal:sync_settings"
-  end 
-end
-
 # Specific Drupal tasks
 namespace :drupal do
+
+    desc "Deploy a drupal site" 
+    task :deploy do
+      invoke "deploy"
+      invoke "drupal:sync_settings"
+    end
+    task default: :deploy
+
+    namespace :deploy do
+      
+      desc "Deploy your project and do an updatedb, configuration import, cache clear..."
+      task :full do
+        invoke "drupal:deploy"
+        invoke "drupal:sync_settings"
+        invoke "drupal:site_offline"
+        invoke "drupal:update:updatedb"
+        invoke "drupal:configuration_import"
+        invoke "drupal:site_online"
+        invoke "drupal:cache:clear"
+      end
+
+      desc "Drop the database and import another one"
+      task :database_import do
+        ask(:database_file, "Path to database file you want to import")
+        db = fetch(:database_file)
+        on roles(:app) do
+          if test("[ -f #{db} ]")
+            within release_path.join(fetch(:app_path)) do
+              execute :drush, "sql-cli < #{db}"
+            end  
+          else 
+            puts "Cannot import the database because file #{db} does not exist on the remote server"
+          end  
+        end    
+      end
+  end
 
   desc 'Run any drush command'
   task :drush do
@@ -128,10 +134,10 @@ namespace :drupal do
   task :sync_settings do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-          settings_src = "#{shared_path}/settings/#{(fetch(:settings_file))}"
-          settings_dest = "#{shared_path}/#{(fetch(:app_path))}/sites/default/settings.php"
-          settings_shared_src = "#{shared_path}/settings/shared.settings.php}"
-          settings_shared_dest = "#{shared_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
+          settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
+          settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
+          settings_shared_src = "#{release_path}/settings/shared.settings.php}"
+          settings_shared_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
           execute :cp, "#{settings_src} #{settings_dest}"
       end
     end
