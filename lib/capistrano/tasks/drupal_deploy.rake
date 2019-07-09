@@ -24,9 +24,12 @@ namespace :drupal do
         invoke "drupal:deploy"
         invoke "drupal:site_offline"
         invoke "drupal:update:updatedb"
-        invoke "drupal:configuration_import"
+        if fetch(:drupal_version) == '7' then
+          invoke "drupal:features_revert"
+        else
+          invoke "drupal:configuration_import"
+        end  
         invoke "drupal:site_online"
-        invoke "drupal:cache:clear"
       end
 
       desc "Drop the database and import another one"
@@ -86,10 +89,11 @@ namespace :drupal do
   desc 'Set the site offline'
   task :site_offline do
     on roles(:app) do
-      if fetch(:drupal_version) == '8' then
-        command = 'state-set system.maintenance_mode 1 -y'
-      else
+      puts "*** Maintenance path = #{release_path.join(fetch(:app_path))}"
+      if fetch(:drupal_version) == '7' then
         command = 'vset maintenance_mode 1'
+      else
+        command = 'state-set system.maintenance_mode 1 -y'
       end
       within release_path.join(fetch(:app_path)) do
         execute :drush, "#{command}"
@@ -100,10 +104,10 @@ namespace :drupal do
   desc 'Set the site online'
   task :site_online do
     on roles(:app) do
-      if fetch(:drupal_version) == '8' then
-        command = 'state-set system.maintenance_mode 0 -y'
-      else
+      if fetch(:drupal_version) == '7' then
         command = 'vset maintenance_mode 0'
+      else
+        command = 'state-set system.maintenance_mode 0 -y'
       end
       within release_path.join(fetch(:app_path)) do
         execute :drush, "#{command}"
@@ -116,6 +120,15 @@ namespace :drupal do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
         execute :drush, 'config-import -y'
+      end
+    end
+  end
+
+  desc 'Revert all features'
+  task :features_revert do
+    on roles(:app) do
+      within release_path.join(fetch(:app_path)) do
+        execute :drush, 'fra -y'
       end
     end
   end
@@ -133,11 +146,17 @@ namespace :drupal do
   task :sync_settings do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-          settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
-          settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
-          settings_shared_src = "#{release_path}/settings/shared.settings.php}"
-          settings_shared_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
-          execute :cp, "#{settings_src} #{settings_dest}"
+        if fetch(:drupal_version) == '7' then
+            settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
+            settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
+            execute :cp, "#{settings_src} #{settings_dest}"        
+        else 
+            settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
+            settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
+            settings_shared_src = "#{release_path}/settings/shared.settings.php}"
+            settings_shared_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
+            execute :cp, "#{settings_src} #{settings_dest}"        
+        end    
       end
     end
   end      
@@ -179,15 +198,13 @@ namespace :drupal do
     desc 'Clear all caches'
     task :clear do
       on roles(:app) do
+        if fetch(:drupal_version) == '7' then
+          command = 'cache-clear all'
+        else
+          command = 'cache-rebuild'
+        end
         within release_path.join(fetch(:app_path)) do
-          if fetch(:drupal_version) == '8' then
-            command = 'cache-rebuild'
-          else
-            command = 'cache-clear all'
-          end
-          within release_path.join(fetch(:app_path)) do
-            execute :drush, "#{command}"
-          end
+          execute :drush, "#{command}"
         end
       end
     end
@@ -201,7 +218,7 @@ namespace :files do
   task :download do
     run_locally do 
       on release_roles :app do |server|
-        ask(:answer, "Do you really want to download the files on the server to your local files? Nothings will be deleted but files can be ovewrite. (y/N)");
+        ask(:answer, "Do you really want to download the files on the server to your local files? Nothing will be deleted but some files might be ovewritten. (y/N)");
         if fetch(:answer) == 'y' then
           remote_files_dir = "#{shared_path}/#{(fetch(:app_path))}/sites/default/files/"
           local_files_dir = "#{(fetch(:app_path))}/sites/default/files/"
@@ -214,7 +231,7 @@ namespace :files do
   desc "Upload drupal sites files (from local to remote)"
   task :upload do
     on release_roles :app do |server|
-      ask(:answer, "Do you really want to upload your local files to the server? Nothings will be deleted but files can be ovewrite. (y/N)");
+      ask(:answer, "Do you really want to upload your local files to the server? Nothing will be deleted but files can be overwritten. (y/N)");
       if fetch(:answer) == 'y' then
         remote_files_dir = "#{shared_path}/#{(fetch(:app_path))}/sites/default/files/"
         local_files_dir = "#{(fetch(:app_path))}/sites/default/files/"
