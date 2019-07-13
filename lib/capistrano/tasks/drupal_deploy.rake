@@ -89,7 +89,6 @@ namespace :drupal do
   desc 'Set the site offline'
   task :site_offline do
     on roles(:app) do
-      puts "*** Maintenance path = #{release_path.join(fetch(:app_path))}"
       if fetch(:drupal_version) == '7' then
         command = 'vset maintenance_mode 1'
       else
