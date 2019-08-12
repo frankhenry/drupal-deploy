@@ -145,17 +145,17 @@ namespace :drupal do
   task :sync_settings do
     on roles(:app) do
       within release_path.join(fetch(:app_path)) do
-        if fetch(:drupal_version) == '7' then
-            settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
-            settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
-            execute :cp, "#{settings_src} #{settings_dest}"        
-        else 
-            settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
-            settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
-            settings_shared_src = "#{release_path}/settings/shared.settings.php}"
-            settings_shared_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
-            execute :cp, "#{settings_src} #{settings_dest}"        
-        end    
+          settings_src = "#{release_path}/settings/#{(fetch(:settings_file))}"
+          settings_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/settings.php"
+          execute :cp, "#{settings_src} #{settings_dest}"        
+          settings_shared_src = "#{release_path}/settings/shared.settings.php}"
+          if test("[ -f #{settings_shared_src} ]") do
+              settings_shared_dest = "#{release_path}/#{(fetch(:app_path))}/sites/default/shared.settings.php"
+              execute :cp, "#{settings_src} #{settings_dest}"            
+            end  
+          else 
+            puts "No shared.settings.php file in this project"
+          end          
       end
     end
   end      
