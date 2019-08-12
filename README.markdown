@@ -1,6 +1,6 @@
 # Capistrano::DrupalDeploy
 
-Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a plugin for capistrano that provide a number of tasks specific to Drupal. It is forked from [github.com/unitedworldwrestling/drupal-deploy](https://github.com/unitedworldwrestling/drupal-deploy). The main difference is this version works with both Drupal 7 and Drupal 8. It does this by creating wrappers around drush commands whose syntax in Drupal 8 is different to what it is in Drupal 7. 
+Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a plugin for Capistrano that provides a number of tasks specific to Drupal. It is forked from [github.com/unitedworldwrestling/drupal-deploy](https://github.com/unitedworldwrestling/drupal-deploy). The main difference is this version works with both Drupal 7 and Drupal 8. It does this by creating wrappers around drush commands whose syntax in Drupal 8 is different to what it is in Drupal 7. 
 
 For example, the command to put a Drupal 7 site into maintenance mode is
 
