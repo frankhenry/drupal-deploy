@@ -1,8 +1,26 @@
 # Capistrano::DrupalDeploy
 
-Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a pluging for capistrano that provide a number of tasks specific to Drupal.
+Deploy [Drupal](https://www.drupal.org/) with [Capistrano v3](http://capistranorb.com/). This gem is a plugin for capistrano that provide a number of tasks specific to Drupal. It is forked from [github.com/unitedworldwrestling/drupal-deploy](https://github.com/unitedworldwrestling/drupal-deploy). The main difference is this version works with both Drupal 7 and Drupal 8. It does this by creating wrappers around drush commands whose syntax in Drupal 8 is different to what it is in Drupal 7. 
 
-If you are new to capistrano check the [Capistrano 3 documentation](http://capistranorb.com/).
+For example, the command to put a Drupal 7 site into maintenance mode is
+
+```
+drush vset maintenance_mode 1
+```
+
+but on Drupal 8 it is 
+
+```
+drush state-set system.maintenance_mode 0 -y
+```
+
+With this project, the following command will work with both Drupal versions:
+
+```
+cap <stage-name> drupal:site_offline
+```
+
+If you are new to Capistrano check the [Capistrano 3 documentation](http://capistranorb.com/).
 
 ## Installation
 [gems](http://rubygems.org) must be installed on your system first.
@@ -16,12 +34,7 @@ group :development do
 end
 ```
 
-And then execute:
-
-    $ bundle
-    $ bundle exec cap install
-
-Or install it yourself as:
+To install:
 
     $ gem install capistrano-drupal-deploy
     $ cap install
@@ -36,143 +49,138 @@ require 'capistrano/drupal-deploy'
 
 ### Configuration
 
-Edit `config/deploy.rb` to set the global parameters. You should at least edit your app_name and your repo_url.
+Edit `config/deploy.rb` to set the global parameters. You should at least edit your `app_name` and your `repo_url`.
 
 ```ruby
  set :application, 'my_app_name'
  set :repo_url, 'git@example.com:me/my_repo.git'
 ```
 
-*Capistrano drupal deploy* makes the following configuration variables available
+*Capistrano drupal deploy* makes the following configuration variables available. Specify these in the `deploy.rb` file in your project root folder.
 
 ```ruby
 # Path to the drupal directory, default to app.
 set :app_path,        "web"
 ```
 
-Drupal need settings.php and, files and private-files shared accross deploy
+This forked version adds another variable to specify the Drupal version. This is what enables it to work with both Drupal 7 and Drupal 8.
 
 ```ruby
-# Link file settings.php
-set :linked_files, fetch(:linked_files, []).push('app/sites/default/settings.php')
+# Drupal version
+set: drupal_version,    "7"
+```
 
+Set up the `linked_dirs` variable to create a common private files folder for sharing across deployments.
+
+```ruby
 # Link dirs files and private-files
 set :linked_dirs, fetch(:linked_dirs, []).push('app/sites/default/files', 'private-files')
 ```
 
-Drush need to be mapped
+**Note:** This forked version does not use the `linked_files` variable used by the [parent project](https://github.com/unitedworldwrestling/drupal-deploy) to manage the _settings.php_ file for your project. Instead it provides a new command `drupal:sync_settings` to copy the file into position. See the section on **Settings Files** below for more details.
+
+Configure the settings file name for each stage in the `config/deploy/<stage_name>.rb` file in your project. For example, if the settings file for your test environment is `test.settings.php`, add this line:
 
 ```ruby
-# NOTE: If stage have different deploy_to you have to copy this line for each <stage_name>.rb
-SSHKit.config.command_map[:drush] = "#{shared_path.join("drush/contrib/drush/drush")}"
+set :settings_file, "test.settings.php"
 ```
-	
-Configure each stage in config/deploy/<stage_name>.rb. Overwrite global settings if needed.
+
+See the section on *Settings Files* at the end of this readme for important info about how to structure your settings files.
+
+Also in the `config/deploy/<stage_name>.rb` file, configure these settings:
 
 ```ruby
-# server-based syntax
-# ======================
-# Defines a single server with a list of roles and multiple properties.
-# You can define all roles on a single server, or split them:
-
-# server 'example.com', user: 'deploy', roles: %w{app db web}, my_property: :my_value
-
-# overwrite deploy_to
-set :deploy_to, '/var/www/stage_name/my_app'
-
-# set a branch for this release
-set :branch, 'dev'
+set :branch, "test"
+set :stage, :test
+set :settings_file, "test.settings.php"
+set :deploy_to, "/var/www/#{fetch(:application)}"
 ```
 
-
-	
 For more information about configuration http://capistranorb.com/
-
 
 ## Deployment
 
-Run deploy
+### Standard deployment
 
-	$ cap <stage_name> deploy
+```
+$ cap <stage_name> deploy
+```
 
-After a couple of commands, it will fail with this error:
+This command does a standard Capistrano deployment (creates a new release and deletes a previous older release), then invokes the new `sync_settings` task to copy the appropriate settings file.
 
-	Finished in 0.067 seconds with exit status 1 (failed).
-	ERROR linked file /var/www/stage_name/my_app/shared/app/sites/default/settings.php does not exist on staging.mysite.com
-	
-As expected, Capistrano has been told to link your settings.php file, but it can’t find it on the server where it expects. We need to manually upload that file now. If we look at the app directory on our server, it now contains two folders releases and shared. Inside of the shared directory you will find a app/sites/default directory. You will need to create your settings.php file into that directory.
+### Full deployment
+```
+$ cap <stage_name> deploy:full
+```
 
-On the server your webserver user (eg. www-data) need to has the right to write in
+This invokes the following task sequence:
 
-	/var/www/stage_name/my_app/shared/app/sites/default/files
-	/var/www/stage_name/my_app/shared/private-files
+* Invokes the standard `deploy` task, including `sync_settings`
+* Puts the site into maintenance mode
+* Runs database updates
+* Reverts features (Drupal 7) or imports configuration (Drupal 8)
+* Takes the site out of maintenance mode
+* Clears the cache
 
-Once this is done, try and deploy again. If everything goes well, Capistrano will clone your app from your repository and work the rest.
+As with any Capistrano project, some preparation is needed on the remote server to configure it in accordance with the structures Capistrano expects. In particular:
 
-Now, every time you want to deploy your app
+* Make sure the path specified in the `deploy_to` setting exists, has the correct permissions, and (for first deployment) is empty. 
+* If you are using Apache virtual hosts or Nginx server blocks, you will need to configure the `DocumentRoot` (Apache) or `root` directive to point to the `current` folder within the project folder structure on the remote server.
 
-	$ cap deploy
+When you execute the `cap deploy` command, Capistrano will deploy your project to the specified path. Don't despair if it doesn't work at the first attempt. Typical problems that arise are:
 
-If you want to deploy your app and also import the configuration, clear cache
+* Incorrect `ssh` configuration - make sure you can access the remote server from the command line, e.g. `ssh user@remote`, before running Capistrano commands.
+* Make sure your server folder structure exists and is writable by the account you are using over `ssh`.
+* Make sure the Git branch you are deploying exists.
 
-	$ cap deploy:full
-	
-And if some troubles occur, just launch the rollback command to return to the previous release.
+If you encounter other problems, please [create an issue](https://github.com/frankhenry/drupal-deploy/issues).
 
-	$ cap deploy:rollback
+If problems occur after a deployment, you can roll back to the previous release with this command:
 
+```
+$ cap <stage-name> deploy:rollback
+```
 
-You should then be able to proceed as you would usually, you may want to familiarise yourself with the truncated list of tasks, you can get a full list with:
+## Available commands
 
-    $ cap -T
-    
-This show a list of all avaible commands:
+This project adds or modifies the following commands compared to the [parent project](https://github.com/unitedworldwrestling/drupal-deploy):
 
-    
-	cap composer:install               # Install the project dependencies via Composer
-	cap deploy                         # Deploy a new release
-	cap deploy:check                   # Check required files and directories exist
-	cap deploy:check:directories       # Check shared and release directories exist
-	cap deploy:check:linked_dirs       # Check directories to be linked exist in shared
-	cap deploy:check:linked_files      # Check files to be linked exist in shared
-	cap deploy:check:make_linked_dirs  # Check directories of files to be linked exist in shared
-	cap deploy:cleanup                 # Clean up old releases
-	cap deploy:cleanup_rollback        # Remove and archive rolled-back release
-	cap deploy:finished                # Finished
-	cap deploy:finishing               # Finish the deployment, clean up server(s)
-	cap deploy:finishing_rollback      # Finish the rollback, clean up server(s)
-	cap deploy:full                    # Deploy your project and do an updatedb, configuration import, cache clear..
-	cap deploy:log_revision            # Log details of the deploy
-	cap deploy:published               # Published
-	cap deploy:publishing              # Publish the release
-	cap deploy:restart                 # Restart application
-	cap deploy:revert_release          # Revert to previous release timestamp
-	cap deploy:reverted                # Reverted
-	cap deploy:reverting               # Revert server(s) to previous release
-	cap deploy:rollback                # Rollback to previous release
-	cap deploy:set_current_revision    # Place a REVISION file with the current revision SHA in the current release path
-	cap deploy:started                 # Started
-	cap deploy:starting                # Start a deployment, make sure server(s) ready
-	cap deploy:symlink:linked_dirs     # Symlink linked directories
-	cap deploy:symlink:linked_files    # Symlink linked files
-	cap deploy:symlink:release         # Symlink release to current
-	cap deploy:symlink:shared          # Symlink files and directories from shared to release
-	cap deploy:updated                 # Updated
-	cap deploy:updating                # Update server(s) by setting up a new release
-	cap drupal:backupdb                # Backup the database using backup and migrate
-	cap drupal:cache:clear             # Clear all caches
-	cap drupal:cli                     # Open an interactive shell on a Drupal site
-	cap drupal:drush                   # Run any drush command
-	cap drupal:configuration_import	   # Configuration import
-	cap drupal:logs                    # Show logs
-	cap drupal:requirements            # Provides information about things that may be wrong in your Drupal installation, if any
-	cap drupal:site_offline            # Set the site offline
-	cap drupal:site_online             # Set the site online
-	cap drupal:update:pm_updatestatus  # Show a report of available minor updates to Drupal core and contrib projects
-	cap drupal:update:updatedb         # Apply any database updates required (as with running update.php)
-	cap drupal:update:updatedb_status  # List any pending database updates
-	cap files:download                 # Download drupal sites files (from remote to local)
-	cap files:upload                   # Upload drupal sites files (from local to remote)
-	cap install                        # Install Capistrano, cap install STAGES=staging,production
+Command | Description | Status
+--------| ----------- | ------
+cap drupal:deploy:database_import | Drop the database and import another one | Added
+cap drupal:features_revert | Revert all features | Added
+cap drupal:sync_settings | Copy the environment-specific settings file | Added
+cap drupal:update:pm_updatestatus | Show a report of available minor updates to Drupal core and contrib projects | Added
+cap deploy | Deploy a new release | Modified
+cap drupal:cache:clear | Clear all caches | Modified
+cap drupal:deploy | Deploy a drupal site | Modified
+cap drupal:deploy:full | Deploy your project and do an updatedb, configuration import, cache clear | Modified
+cap drupal:site_offline | Set the site offline | Modified
+cap drupal:site_online | Set the site online | Modified
 
+Use the `cap -T` command to get a full list of available commands.
+
+## Settings Files
+
+The `drupal:sync_settings` task in this repo depends on your settings files being organised in the way described here. If you want to organise your files differently, you will probably need to modify the `sync_settings` task in `drupal_deploy.rake`, or write your own task and invoke it instead of `sync_settings`.
+
+There are lots of ways to manage settings files, but I find it convenient to have one for each environment. Many settings are the same in all environments, so I place those in a shared file which is then included in the environment-specific file, like so:
+
+```php
+if (file_exists(__DIR__ . '/shared.settings.php')) {
+  include __DIR__ . '/shared.settings.php';
+}
+```
+
+I use this approach on Drupal 7 and Drupal 8. In the Drupal repo, all settings files are kept in a `settings` folder under the project root. The `sync_settings` task copies the appropriate files during deployment. Typically, the folder structure looks like this:
+
+```
+myproject
+└───settings
+    │   dev.settings.php
+    │   local.settings.php
+    │   prod.settings.php
+    │   shared.settings.php
+    │   local.settings.php
+```
 
