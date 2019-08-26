@@ -181,6 +181,5 @@ myproject
     │   local.settings.php
     │   prod.settings.php
     │   shared.settings.php
-    │   local.settings.php
 ```
 
